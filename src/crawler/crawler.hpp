@@ -4,7 +4,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
-#include <queue>
+#include <deque>
 #include <string>
 #include <memory>
 
@@ -14,10 +14,13 @@
 class Webcrawler {
     private:
         std::mutex url_queue_lock;
-        std::queue<std::string> url_queue;
+        std::deque<std::string> url_queue;
         
         std::mutex visited_sites_lock;
         SerializableStringVector visited_sites;
+
+        std::mutex invalid_sites_lock;
+        std::vector<std::string> invalid_sites;
         
 
         std::string folder_path = "crawler/";
@@ -58,6 +61,10 @@ class Webcrawler {
 
         // Return if the Webcrawler is working
         bool is_running() const;
+
+        void ts_push_invalid_site(std::string url);
+
+        bool has_visited_site(std::string url);
 };
 
 #endif

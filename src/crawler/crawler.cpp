@@ -23,6 +23,8 @@ void Webcrawler::save_to_files() {
     // Move the queue into the string vector
     while (this->url_queue.empty() == false) to_be_visited.push_back(this->ts_pop_url());
 
+
+
     // Convert to byte array
     SerializableStringVector::ByteArray to_be_visited_bytes;
     to_be_visited.to_bytearray(to_be_visited_bytes);
@@ -30,6 +32,8 @@ void Webcrawler::save_to_files() {
     // Write to file
     std::ofstream to_be_visited_file(this->folder_path + "to_be_visited_sites.bin", std::ios::binary | std::ios::out);
     to_be_visited_file.write((char*)to_be_visited_bytes.data(), to_be_visited_bytes.size());
+    
+
 
     // Save the visited sites
     SerializableStringVector::ByteArray visited_sites_bytes;
@@ -83,15 +87,13 @@ void Webcrawler::set_save_location(std::string s) {
 void Webcrawler::ts_push_url(std::string url) {
     // Lock the mutexes
     url_queue_lock.lock();
-    visited_sites_lock.lock();
 
-    // Check if we have already viewed that page
-    if (std::count(visited_sites.begin(), visited_sites.end(), url) == 0) {
-        url_queue.push(url);
+    if (std::count(url_queue.begin(), url_queue.end(), url) == 0) {
+        std::cout << "Pushed: " << url << std::endl;
+        url_queue.push_back(url);
     }
 
     // Unlock mutexes
-    visited_sites_lock.unlock();
     url_queue_lock.unlock();
 }
 
@@ -99,11 +101,27 @@ bool Webcrawler::is_running() const {
     return workers.size() == 0;
 }
 
+bool Webcrawler::has_visited_site(std::string url) {
+    visited_sites_lock.lock();
+    invalid_sites_lock.lock();
+
+    bool v = std::count(visited_sites.begin(), visited_sites.end(), url) != 0 
+          || std::count(invalid_sites.begin(), invalid_sites.end(), url) != 0;
+
+    visited_sites_lock.unlock();
+    invalid_sites_lock.unlock();
+
+    return v;
+
+}
+
 std::string Webcrawler::ts_pop_url() {
     url_queue_lock.lock();
 
     std::string url = url_queue.front();
-    url_queue.pop();
+    url_queue.pop_front();
+
+    std::cout << "Popped: " << url << std::endl;
 
     url_queue_lock.unlock();
     return url;
@@ -125,12 +143,18 @@ void Webcrawler::start_workers(int n_of_workers) {
     if (workers.size() > 0) return;
 
     // Now lets initialize all our workers
-    for (int i=0; i < n_of_workers; i++) {
-        workers.push_back(std::make_shared<WebcrawlerWorker>(*this));
-    }
+    workers.push_back(std::make_shared<WebcrawlerWorker>(*this));
 }
 
 void Webcrawler::stop_workers() {
     // To be done
     workers.clear();
 }
+
+void Webcrawler::ts_push_invalid_site(std::string url) {
+    invalid_sites_lock.lock();
+
+    invalid_sites.push_back(url);
+
+    invalid_sites_lock.unlock();
+} 
