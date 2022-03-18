@@ -16,6 +16,7 @@ WebcrawlerWorker::WebcrawlerWorker(Webcrawler& c)
     }
 
 WebcrawlerWorker::~WebcrawlerWorker() {
+    threadShouldRun = false;
     workerThread.join();
 }
 

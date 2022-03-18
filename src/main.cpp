@@ -9,11 +9,9 @@ int main(int argc, char const *argv[]) {
 
     crawler.start();
 
-    while (true) {
-        if (getchar() == 'e') {
-            crawler.stop();
-        }
-    }
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    crawler.stop();
 
     return 0;
 }
