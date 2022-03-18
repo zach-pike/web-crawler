@@ -8,13 +8,16 @@
 #include <mutex>
 #include <queue>
 #include <string>
+#include <memory>
+
+#include "worker/worker.hpp"
 
 class Webcrawler {
     private:
         std::mutex queue_lock;
         std::queue<std::string> websites;
 
-        std::vector<void> workers;
+        std::vector<std::shared_ptr<WebcrawlerWorker>> workers;
     public:
         Webcrawler(std::initializer_list<std::string> initial_urls);
         
@@ -25,6 +28,8 @@ class Webcrawler {
         // Thread safe URL push function
         void ts_push_url(std::string url);
 
+        // Assign work to all workers
+        void assign_work();
 };
 
 #endif
