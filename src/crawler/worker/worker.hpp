@@ -5,9 +5,11 @@
 #include <atomic>
 #include <functional>
 
+// C++ moment
+class Webcrawler;
+
 class WebcrawlerWorker {
     public:
-        using NotifierFunc = std::function<void(std::vector<std::string>)>;
 
         enum class WorkerState {
             WAITING_WORK,
@@ -17,18 +19,15 @@ class WebcrawlerWorker {
     private:
         std::atomic<WorkerState> workerState = WorkerState::WAITING_WORK;
 
-        bool threadInitialized = false;
+        bool threadShouldRun = true;
         std::thread workerThread;
-        std::string fetchUrl;
+        Webcrawler& webcrawler;
 
-        void workerThreadFunc(NotifierFunc notifier);
+        void workerThreadFunc();
 
     public:
-        WebcrawlerWorker();
+        WebcrawlerWorker(Webcrawler& webcrawler);
         ~WebcrawlerWorker();
-
-        // Assign a asyncronous crawler work
-        void assignWork(std::string url, NotifierFunc notifier);
 };
 
 #endif

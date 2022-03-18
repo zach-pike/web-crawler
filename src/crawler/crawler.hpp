@@ -28,8 +28,13 @@ class Webcrawler {
         // Thread safe URL push function
         void ts_push_url(std::string url);
 
-        // Assign work to all workers
-        void assign_work();
+        size_t getQueueSize() const;
+
+        // Starts all the workers
+        void start();
+
+        // Stop all the workers
+        void stop();
 };
 
 #endif

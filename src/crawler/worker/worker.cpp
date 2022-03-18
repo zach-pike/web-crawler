@@ -4,43 +4,48 @@
 #include "httplib.h"
 #include "CxxUrl/url.hpp"
 
+#include "crawler/crawler.hpp"
+
 #include <iostream>
 #include <sstream>
+#include <chrono>
 
-void WebcrawlerWorker::assignWork(std::string url, NotifierFunc notifier) {
-    fetchUrl = url;
-    threadInitialized = true;
-    workerThread = std::thread(std::bind(&WebcrawlerWorker::workerThreadFunc, this, notifier));
-}
-
-WebcrawlerWorker::WebcrawlerWorker() {}
+WebcrawlerWorker::WebcrawlerWorker(Webcrawler& c)
+    : webcrawler{c} {
+        workerThread = std::thread(std::bind(&WebcrawlerWorker::workerThreadFunc, this));
+    }
 
 WebcrawlerWorker::~WebcrawlerWorker() {
-    if (threadInitialized) workerThread.join();
+    workerThread.join();
 }
 
-void WebcrawlerWorker::workerThreadFunc(NotifierFunc notifier) {
+void WebcrawlerWorker::workerThreadFunc() {
+     while (this->threadShouldRun) {
+        if (webcrawler.getQueueSize() == 0) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        } else {
+            // Get a url
+            std::string urlstr = webcrawler.ts_pop_url();
 
-    // Parse the url
-    Url url(this->fetchUrl);
+            Url url(urlstr);
 
-    std::stringstream ss;
-    ss << url.scheme();
-    ss << "://";
-    ss << url.host();
+            std::stringstream ss;
+            ss << url.scheme();
+            ss << "://";
+            ss << url.host();
 
-    // First we need to fetch the page
-    httplib::Client request(ss.str());
+            // First we need to fetch the page
+            httplib::Client request(ss.str());
 
-    this->workerState = WorkerState::FETCHING;
-    const auto response = request.Get(url.path().c_str());
+            this->workerState = WorkerState::FETCHING;
+            const auto response = request.Get(url.path().c_str());
 
-    // Now lets just print out the text
-    this->workerState = WorkerState::PARSING;
-    std::cout << "Got: " << response->body << std::endl;
-    
-    notifier(std::vector<std::string>());
+            // Now lets just print out the text
+            this->workerState = WorkerState::PARSING;
+            std::cout << "Got: " << response->body << std::endl;
 
-    // Now were done so lets just return a empty array
-    this->workerState = WorkerState::WAITING_WORK;
+            // Now were done so lets just return a empty array
+            this->workerState = WorkerState::WAITING_WORK;
+        }
+    }
 }

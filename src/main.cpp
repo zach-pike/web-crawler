@@ -7,7 +7,13 @@
 int main(int argc, char const *argv[]) {
     Webcrawler crawler = { "https://www.minecraftforum.net/" };
 
-    crawler.assign_work();
+    crawler.start();
+
+    while (true) {
+        if (getchar() == 'e') {
+            crawler.stop();
+        }
+    }
 
     return 0;
 }
