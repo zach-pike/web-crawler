@@ -74,18 +74,23 @@ void Webcrawler::load_from_files() {
     }
 }
 
+// Set the save location of the bin files
 void Webcrawler::set_save_location(std::string s) {
     this->folder_path = s;
 }
 
+// (Thread Safe) push a url into the url queue
 void Webcrawler::ts_push_url(std::string url) {
+    // Lock the mutexes
     url_queue_lock.lock();
     visited_sites_lock.lock();
 
+    // Check if we have already viewed that page
     if (std::count(visited_sites.begin(), visited_sites.end(), url) == 0) {
         url_queue.push(url);
     }
 
+    // Unlock mutexes
     visited_sites_lock.unlock();
     url_queue_lock.unlock();
 }
