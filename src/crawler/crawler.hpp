@@ -1,8 +1,6 @@
 #ifndef __CRAWLER_H
 #define __CRAWLER_H
 
-#define MAX_N_OF_WORKERS 1
-
 #include <vector>
 #include <thread>
 #include <mutex>
@@ -15,6 +13,7 @@
 class Webcrawler {
     private:
         std::mutex queue_lock;
+        
         std::queue<std::string> websites;
 
         std::vector<std::shared_ptr<WebcrawlerWorker>> workers;
@@ -31,10 +30,10 @@ class Webcrawler {
         size_t getQueueSize() const;
 
         // Starts all the workers
-        void start();
+        void start_workers(int n_of_workers);
 
         // Stop all the workers
-        void stop();
+        void stop_workers();
 };
 
 #endif

@@ -38,12 +38,15 @@ void WebcrawlerWorker::workerThreadFunc() {
             // First we need to fetch the page
             httplib::Client request(ss.str());
 
+            // Set the worker state
             this->workerState = WorkerState::FETCHING;
             const auto response = request.Get(url.path().c_str());
 
             // Now lets just print out the text
             this->workerState = WorkerState::PARSING;
-            std::cout << "Got: " << response->body << std::endl;
+            
+            // Parse the XML here for links of any type
+            std::vector<std::string> links_found;
 
             // Now were done so lets just return a empty array
             this->workerState = WorkerState::WAITING_WORK;

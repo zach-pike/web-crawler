@@ -29,16 +29,16 @@ size_t Webcrawler::getQueueSize() const {
     return websites.size();
 }
 
-void Webcrawler::start() {
+void Webcrawler::start_workers(int n_of_workers) {
     if (workers.size() > 0) return;
 
     // Now lets initialize all our workers
-    for (int i=0; i < MAX_N_OF_WORKERS; i++) {
+    for (int i=0; i < n_of_workers; i++) {
         workers.push_back(std::make_shared<WebcrawlerWorker>(*this));
     }
 }
 
-void Webcrawler::stop() {
+void Webcrawler::stop_workers() {
     // To be done
     workers.clear();
 }
