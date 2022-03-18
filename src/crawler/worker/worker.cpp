@@ -48,6 +48,8 @@ void WebcrawlerWorker::workerThreadFunc() {
             // Parse the XML here for links of any type
             std::vector<std::string> links_found;
 
+            webcrawler.ts_push_visited(urlstr);
+
             // Now were done so lets just return a empty array
             this->workerState = WorkerState::WAITING_WORK;
         }

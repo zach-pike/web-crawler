@@ -2,6 +2,7 @@
 #include "worker/worker.hpp"
 
 #include <iostream>
+#include <filesystem>
 
 Webcrawler::Webcrawler(std::initializer_list<std::string> list) {
     for (auto i : list) {
@@ -9,24 +10,110 @@ Webcrawler::Webcrawler(std::initializer_list<std::string> list) {
     }
 }
 
+Webcrawler::Webcrawler() {}
+
+Webcrawler::~Webcrawler() {}
+
+void Webcrawler::save_to_files() {
+    if (!workers.empty()) throw std::runtime_error("Cannot save to file while workers are working");
+
+    // We will convert the queue into a SerializableStringVector
+    SerializableStringVector to_be_visited;
+
+    // Move the queue into the string vector
+    while (this->url_queue.empty() == false) to_be_visited.push_back(this->ts_pop_url());
+
+    // Convert to byte array
+    SerializableStringVector::ByteArray to_be_visited_bytes;
+    to_be_visited.to_bytearray(to_be_visited_bytes);
+
+    // Write to file
+    std::ofstream to_be_visited_file(this->folder_path + "to_be_visited_sites.bin", std::ios::binary | std::ios::out);
+    to_be_visited_file.write((char*)to_be_visited_bytes.data(), to_be_visited_bytes.size());
+
+    // Save the visited sites
+    SerializableStringVector::ByteArray visited_sites_bytes;
+    visited_sites.to_bytearray(visited_sites_bytes);
+
+    // Save to file
+    std::ofstream file2(this->folder_path + "visited_sites.bin", std::ios::binary | std::ios::out);
+    file2.write((char*)visited_sites_bytes.data(), visited_sites_bytes.size());
+}
+
+void Webcrawler::load_from_files() {
+    if (!workers.empty()) throw std::runtime_error("Cannot save to file while workers are working");
+
+    // Get file & filesize
+    std::ifstream visited(this->folder_path + "visited_sites.bin", std::ios::binary | std::ios::in);
+    size_t visited_size = std::filesystem::file_size(this->folder_path + "visited_sites.bin");
+
+    // Read the file
+    uint8_t* visited_buffer = new uint8_t[visited_size];
+    visited.read((char*)visited_buffer, visited_size);
+
+    // Load into array
+    SerializableStringVector::ByteArray visited_bytes(visited_buffer, visited_buffer + visited_size);
+    visited_sites.from_bytearray(visited_bytes);
+
+    // Get file & filesize
+    std::ifstream to_be_visited(this->folder_path + "to_be_visited_sites.bin", std::ios::binary | std::ios::in);
+    size_t to_be_visited_size = std::filesystem::file_size(this->folder_path + "to_be_visited_sites.bin");
+
+    // Read the file
+    uint8_t* to_be_visited_buffer = new uint8_t[to_be_visited_size];
+    to_be_visited.read((char*)to_be_visited_buffer, to_be_visited_size);
+
+    // Load into array
+    SerializableStringVector to_be_visited_array;
+    SerializableStringVector::ByteArray to_be_visited_bytes(to_be_visited_buffer, to_be_visited_buffer + to_be_visited_size);
+    to_be_visited_array.from_bytearray(to_be_visited_bytes);
+
+    // Push the array into the queue
+    for (auto i : to_be_visited_array) {
+        this->ts_push_url(i);
+    }
+}
+
+void Webcrawler::set_save_location(std::string s) {
+    this->folder_path = s;
+}
+
 void Webcrawler::ts_push_url(std::string url) {
-    queue_lock.lock();
-    websites.push(url);
-    queue_lock.unlock();
+    url_queue_lock.lock();
+    visited_sites_lock.lock();
+
+    if (std::count(visited_sites.begin(), visited_sites.end(), url) == 0) {
+        url_queue.push(url);
+    }
+
+    visited_sites_lock.unlock();
+    url_queue_lock.unlock();
+}
+
+bool Webcrawler::is_running() const {
+    return workers.size() == 0;
 }
 
 std::string Webcrawler::ts_pop_url() {
-    queue_lock.lock();
+    url_queue_lock.lock();
 
-    std::string url = websites.front();
-    websites.pop();
+    std::string url = url_queue.front();
+    url_queue.pop();
 
-    queue_lock.unlock();
+    url_queue_lock.unlock();
     return url;
 }
 
+void Webcrawler::ts_push_visited(std::string url) {
+    visited_sites_lock.lock();
+
+    visited_sites.push_back(url);
+
+    visited_sites_lock.unlock();
+}
+
 size_t Webcrawler::getQueueSize() const {
-    return websites.size();
+    return url_queue.size();
 }
 
 void Webcrawler::start_workers(int n_of_workers) {
