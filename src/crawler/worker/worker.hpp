@@ -17,7 +17,9 @@ class WebcrawlerWorker {
             PARSING
         };
     private:
-        std::vector<std::string> bad_exts = { ".jpg", ".png", ".mp4", ".mp3", ".js", ".jpeg", ".css" };
+        std::vector<std::string> bad_exts = { ".jpg", ".png", ".mp4", ".mp3", ".js", ".jpeg", ".css", ".ico", ".mod" };
+        bool is_bad_link(std::string url) const;
+
         std::atomic<WorkerState> workerState = WorkerState::WAITING_WORK;
 
         bool threadShouldRun = true;

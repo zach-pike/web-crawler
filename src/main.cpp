@@ -6,18 +6,25 @@
 #include "CxxUrl/url.hpp"
 #include "svector/svector.hpp"
 
+#include "ANSI-color-codes.h"
+
 int main(int argc, char const *argv[]) {
     Webcrawler crawler;
-    crawler.ts_push_url("https://www.minecraftforum.net/");
-    crawler.ts_push_url("https://www.msn.com/en-us");
+    crawler.load_from_files();
+
+    // // seed links
+    // crawler.ts_push_url("https://reddit.com");
+    // crawler.ts_push_url("https://www.minecraftforum.net/");
+    // crawler.ts_push_url("https://knowyourmeme.com/");
 
     crawler.start_workers(10);
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    getchar();
+    std::cout << GRN << "Stopping crawlers!" << reset << std::endl;
 
     crawler.stop_workers();
 
-    // crawler.save_to_files();
+    crawler.save_to_files();
 
     return 0;
 }

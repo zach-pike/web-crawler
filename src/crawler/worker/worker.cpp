@@ -5,6 +5,7 @@
 #include "CxxUrl/url.hpp"
 
 #include "crawler/crawler.hpp"
+#include "ANSI-color-codes.h"
 
 #include <iostream>
 #include <sstream>
@@ -29,6 +30,8 @@ void WebcrawlerWorker::workerThreadFunc() {
             // Get a url
             std::string urlstr = webcrawler.ts_pop_url();
 
+            try {
+
             // Parse the url
             Url url(urlstr);
 
@@ -43,21 +46,15 @@ void WebcrawlerWorker::workerThreadFunc() {
 
             // Check if we have visited the site already
             if (webcrawler.has_visited_site(visited_link) == true) continue;
+            
 
-            // Look for a bad file extension
-            bool badlink = false;
-            for (auto ext : bad_exts) {
-                if (url.path().find(ext) != std::string::npos) {
-                    badlink = true;
-                    break;
-                }
-            }
-            if (badlink) continue;
-
-            std::cout << "Popped: " << visited_link << std::endl;
+            std::cout << CYN << "Popped: " << visited_link << reset << std::endl;
 
             // First we need to fetch the page
             httplib::Client request(ss.str());
+            request.set_connection_timeout(std::chrono::seconds(10));
+            request.set_read_timeout(std::chrono::seconds(10));
+            request.set_write_timeout(std::chrono::seconds(10));
 
             // Set the worker state
             this->workerState = WorkerState::FETCHING;
@@ -69,7 +66,7 @@ void WebcrawlerWorker::workerThreadFunc() {
             if (response.error() == httplib::Error::Success && response->status >= 200 && response->status < 300) {
                 std::string content = response->body;
 
-                std::cout << "Got: " << visited_link << std::endl;
+                std::cout << MAG << "Got: " << visited_link << reset << std::endl;
 
                 // Link regex
                 std::regex_iterator<std::string::iterator>::regex_type rx("https?:\\/\\/(www\\.)?"\
@@ -85,11 +82,11 @@ void WebcrawlerWorker::workerThreadFunc() {
                     auto str = n->str();
 
                     // If we have not visited the site yet, append it to the list
-                    if (webcrawler.has_visited_site(str) == false) {
-                        webcrawler.ts_push_url(n->str());
+                    if (webcrawler.has_visited_site(str) == false && is_bad_link(str) == false) {
+                        webcrawler.ts_push_url(str);
                         webcrawler.ts_push_visited(visited_link);
 
-                        std::cout << "Pushed: " << n->str() << std::endl;
+                        std::cout << BLU << "Pushed: " << str << reset << std::endl;
                     }
 
                     // Increment the iterator
@@ -100,16 +97,31 @@ void WebcrawlerWorker::workerThreadFunc() {
                 webcrawler.ts_push_invalid_site(visited_link);
 
                 if (response.error() == httplib::Error::Success) {
-                    printf("Response code %d\n", response->status);
+                    std::cout << RED << "Response code " << response->status << " for " << visited_link << reset << std::endl;
                 } else {
-                    printf("Error number %d\n", static_cast<int>(response.error()));
+                    std::cout << RED << "Error code " << static_cast<int>(response.error()) << " for " << visited_link << reset << std::endl;
+
                 }
             }
 
             // Now were done so lets just return a empty array
             this->workerState = WorkerState::WAITING_WORK;
+
+            } catch(Url::parse_error e) {
+                std::cout << RED << "Could not parse url: " << urlstr << reset << std::endl;
+            }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(700));
     }
+}
+
+bool WebcrawlerWorker::is_bad_link(std::string url) const {
+    for (auto ext : bad_exts) {
+        if (url.find(ext) != std::string::npos) {
+            return true;
+        }
+    }
+
+    return false;
 }
